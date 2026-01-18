@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="100" fill="#1e293b"/>
+  <path d="M150 256h212M150 256c0-30 0-60 20-60h20c20 0 20 30 20 60s0 60-20 60h-20c-20 0-20-30-20-60zm152 0c0-30 0-60 20-60h20c20 0 20 30 20 60s0 60-20 60h-20c-20 0-20-30-20-60z" stroke="#10b981" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="256" y="420" font-family="Arial, sans-serif" font-size="60" fill="#10b981" text-anchor="middle" font-weight="bold">40veFit</text>
+</svg>

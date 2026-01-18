@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>40veFit Dijital Kılavuzu</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="icon" type="image/svg+xml" href="./icon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(() => console.log('Service Worker Registered'))
+                .catch((error) => console.log('Service Worker Failed', error));
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tempo-box {
+            transition: all 0.3s ease;
+        }
+
+        .active-beat {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+            border-color: #10B981;
+            /* Emerald 500 */
+            color: #10B981;
+        }
+
+        .phase-positive {
+            background-color: #10B981;
+            color: white;
+        }
+
+        /* Patlayıcı */
+        .phase-hold {
+            background-color: #F59E0B;
+            color: white;
+        }
+
+        /* Bekle */
+        .phase-negative {
+            background-color: #3B82F6;
+            color: white;
+        }
+
+        /* Negatif */
+
+        .tab-btn.active {
+            border-bottom: 3px solid #10B981;
+            color: #10B981;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-20">
+
+    <!-- Header -->
+    <header class="bg-slate-800 p-4 sticky top-0 z-50 shadow-lg border-b border-slate-700">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold text-emerald-400">40veFit <span class="text-white text-sm font-light">Video
+                        Kılavuz</span></h1>
+                <p class="text-xs text-slate-400">5x5 Direnç Bandı Sistemi</p>
+            </div>
+            <button onclick="toggleInfo()" class="text-slate-400 hover:text-white"><i
+                    class="fas fa-info-circle text-xl"></i></button>
+        </div>
+    </header>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[60] flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-lg p-6 max-w-sm w-full border border-slate-600">
+            <h2 class="text-lg font-bold text-emerald-400 mb-2">Sistem Özeti</h2>
+            <ul class="text-sm space-y-2 text-slate-300 list-disc pl-4">
+                <li><strong>5x5 Kuralı:</strong> 5 Set, 5 Tekrar.</li>
+                <li><strong>İlerleme:</strong> 5x5'i rahat yapınca bandı kalınlaştır.</li>
+                <li><strong>Tempo:</strong> Her tekrar 8 sayı sürer.</li>
+                <li><strong>Dinlenme:</strong> Set arası 2-3 dk.</li>
+            </ul>
+            <button onclick="toggleInfo()"
+                class="mt-4 w-full bg-slate-700 py-2 rounded text-white font-bold">Kapat</button>
+        </div>
+    </div>
+
+    <!-- Video Modal -->
+    <div id="videoModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-95 z-[70] flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-black rounded-lg overflow-hidden shadow-2xl border border-slate-700 relative">
+            <div class="aspect-video w-full">
+                <iframe id="videoFrame" class="w-full h-full" src="" title="YouTube video player" frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    referrerpolicy="no-referrer" allowfullscreen></iframe>
+            </div>
+            <button onclick="closeVideo()"
+                class="absolute top-2 right-2 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 shadow-lg z-50">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mt-4 flex flex-col items-center gap-2">
+            <p class="text-slate-400 text-sm text-center">Video ilgili hareketin anlatımından başlayacaktır.</p>
+            <a id="fallbackLink" href="#" target="_blank"
+                class="text-emerald-500 hover:text-emerald-400 text-sm underline flex items-center gap-2">
+                <i class="fas fa-external-link-alt"></i> Video açılmıyorsa YouTube'da izlemek için tıklayın
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex justify-around bg-slate-800 border-b border-slate-700 text-sm">
+        <button onclick="switchTab('warmup')" class="tab-btn active py-3 px-4 w-1/4" id="btn-warmup">Isınma</button>
+        <button onclick="switchTab('dayA')" class="tab-btn py-3 px-4 w-1/4" id="btn-dayA">A Günü</button>
+        <button onclick="switchTab('dayB')" class="tab-btn py-3 px-4 w-1/4" id="btn-dayB">B Günü</button>
+        <button onclick="switchTab('cooldown')" class="tab-btn py-3 px-4 w-1/4" id="btn-cooldown">Soğuma</button>
+    </nav>
+
+    <main class="max-w-md mx-auto p-4">
+
+        <!-- Global Tools: Tempo Visualizer -->
+        <div class="bg-slate-800 rounded-xl p-4 mb-6 border border-slate-700 shadow-lg relative overflow-hidden">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-white"><i class="fas fa-stopwatch text-emerald-400 mr-2"></i>8 Vuruş Ritmi
+                </h3>
+                <button onclick="toggleTempo()" id="tempoBtn"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded text-xs font-bold transition">
+                    BAŞLAT
+                </button>
+            </div>
+
+            <div class="grid grid-cols-8 gap-1 h-12 mb-2">
+                <!-- 1: Patlayıcı (Pozitif) -->
+                <div id="beat-1"
+                    class="tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600">
+                    1</div>
+                <!-- 2-4: Maksimum Sıkıştırma (Statik) -->
+                <div id="beat-2"
+                    class="tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600">
+                    2</div>
+                <div id="beat-3"
+                    class="tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600">
+                    3</div>
+                <div id="beat-4"
+                    class="tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600">
+                    4</div>
+                <!-- 5-8: Yavaş Bırakma (Negatif) -->
+                <div id="beat-5"
+                    class="tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600">
+                    5</div>
+                <div id="beat-6"
+                    class="tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600">
+                    6</div>
+                <div id="beat-7"
+                    class="tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600">
+                    7</div>
+                <div id="beat-8"
+                    class="tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600">
+                    8</div>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                <span class="text-emerald-400">İT / ÇEK</span>
+                <span class="text-amber-400">BEKLE (SIK)</span>
+                <span class="text-blue-400">YAVAŞÇA SAL</span>
+            </div>
+        </div>
+
+        <!-- Global Tools: Rest Timer -->
+        <div class="bg-slate-800 rounded-xl p-4 mb-6 border border-slate-700 flex justify-between items-center">
+            <div>
+                <h3 class="font-bold text-sm text-slate-200">Set Arası Dinlenme</h3>
+                <p class="text-xs text-slate-400">Hedef: 2-3 Dakika</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="timerDisplay" class="font-mono text-xl font-bold text-emerald-400">02:00</span>
+                <button onclick="startTimer()"
+                    class="bg-slate-700 hover:bg-slate-600 p-2 rounded-full w-10 h-10 flex items-center justify-center transition">
+                    <i class="fas fa-play text-xs"></i>
+                </button>
+                <button onclick="resetTimer()"
+                    class="bg-slate-700 hover:bg-slate-600 p-2 rounded-full w-10 h-10 flex items-center justify-center transition">
+                    <i class="fas fa-redo text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- CONTENT: WARMUP -->
+        <div id="warmup" class="tab-content">
+            <div class="flex justify-between items-center mb-4 border-l-4 border-emerald-500 pl-3">
+                <h2 class="text-lg font-bold text-emerald-400">Dinamik Isınma</h2>
+                <button onclick="openVideo('Bnm14wkSToU', 0)"
+                    class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded-full flex items-center gap-2 transition">
+                    <i class="fab fa-youtube"></i> İzle
+                </button>
+            </div>
+
+            <div class="bg-slate-800 rounded-lg p-4 text-sm text-slate-300 border border-slate-700">
+                <p class="mb-4 italic text-slate-400 text-xs">Bu hareketleri mola vermeden arka arkaya 10 tekrar yapın.
+                </p>
+                <ul class="space-y-3">
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Omuz Çevirme:</strong> 10 Öne, 10 Arkaya.</span>
+                    </li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Yana Açış & Diz Çekme:</strong> Eş zamanlı.</span>
+                    </li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Çapraz Dokunma:</strong> Eğilerek parmak ucuna.</span>
+                    </li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Squat & Kol İndirme:</strong> Kolları indirirken çök.</span>
+                    </li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Frankenstein:</strong> Ayağı öne savurup dokun.</span>
+                    </li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Yana Eğilme:</strong> Belden altı sabit.</span>
+                    </li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Reverse Lunge:</strong> Geri adım at, kollar yukarı.</span>
+                    </li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Good Morning:</strong> Kalça geri, gövde öne.</span>
+                    </li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Yarım Şınav + Çocuk Pozu:</strong> Dizler yerde.</span>
+                    </li>
+                    <li class="flex items-start"><i class="fas fa-check-circle text-emerald-500 mt-1 mr-2"></i>
+                        <span><strong>Yerinde Koşma:</strong> 20 adım hafif tempo.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- CONTENT: A DAY -->
+        <div id="dayA" class="tab-content hidden">
+            <h2 class="text-lg font-bold mb-4 text-emerald-400 border-l-4 border-emerald-500 pl-3">A Günü: İtiş & Bacak
+            </h2>
+
+            <!-- Card 1 -->
+            <div class="exercise-card bg-slate-800 rounded-lg p-4 mb-4 border border-slate-700">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold">1. Squat (Çökme)</h3>
+                    <button onclick="openVideo('CXoqTYJ3Hrs', 240)"
+                        class="text-red-500 hover:text-red-400 text-sm flex items-center gap-1">
+                        <i class="fab fa-youtube"></i> İzle
+                    </button>
+                </div>
+                <span class="bg-slate-700 px-2 py-1 rounded text-xs font-mono mb-2 inline-block">5 Set x 5 Tekrar</span>
+                <p class="text-xs text-slate-400 mb-3">Odak: Ön bacak ve Kalça</p>
+                <div class="bg-slate-900 rounded p-3 text-sm text-slate-300 mb-3 border-l-2 border-emerald-500">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i> <strong>Teknik:</strong> Bant ayakların
+                    altında. Bandı omuzlarına al. Çökerken kalçayı dışarı çıkar, dizler ayak ucunu geçmesin.
+                </div>
+                <div class="flex gap-2 justify-between">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="exercise-card bg-slate-800 rounded-lg p-4 mb-4 border border-slate-700">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold">2. Chest Press</h3>
+                    <button onclick="openVideo('CXoqTYJ3Hrs', 545)"
+                        class="text-red-500 hover:text-red-400 text-sm flex items-center gap-1">
+                        <i class="fab fa-youtube"></i> İzle
+                    </button>
+                </div>
+                <span class="bg-slate-700 px-2 py-1 rounded text-xs font-mono mb-2 inline-block">5 Set x 5 Tekrar</span>
+                <p class="text-xs text-slate-400 mb-3">Odak: Göğüs ve Arka Kol</p>
+                <div class="bg-slate-900 rounded p-3 text-sm text-slate-300 mb-3 border-l-2 border-emerald-500">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i> <strong>Teknik:</strong> Bandı sırtından geçir
+                    (Çapraz tutabilirsin). Omuzları değil, göğsü sıkarak it.
+                </div>
+                <div class="flex gap-2 justify-between">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="exercise-card bg-slate-800 rounded-lg p-4 mb-4 border border-slate-700">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold">3. Bent Over Row</h3>
+                    <button onclick="openVideo('CXoqTYJ3Hrs', 823)"
+                        class="text-red-500 hover:text-red-400 text-sm flex items-center gap-1">
+                        <i class="fab fa-youtube"></i> İzle
+                    </button>
+                </div>
+                <span class="bg-slate-700 px-2 py-1 rounded text-xs font-mono mb-2 inline-block">5 Set x 5 Tekrar</span>
+                <p class="text-xs text-slate-400 mb-3">Odak: Sırt (Kürek Çekme)</p>
+                <div class="bg-slate-900 rounded p-3 text-sm text-slate-300 mb-3 border-l-2 border-emerald-500">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i> <strong>Teknik:</strong> Bandı ikiye katla,
+                    üstüne bas. Sandalyeye oturur gibi eğil (Sırt düz). Dirsekleri geriye çek.
+                </div>
+                <div class="flex gap-2 justify-between">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENT: B DAY -->
+        <div id="dayB" class="tab-content hidden">
+            <h2 class="text-lg font-bold mb-4 text-emerald-400 border-l-4 border-emerald-500 pl-3">B Günü: Arka Zincir &
+                Omuz</h2>
+
+            <!-- Card 1 -->
+            <div class="exercise-card bg-slate-800 rounded-lg p-4 mb-4 border border-slate-700">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold">1. RDL (Yerden Kesme)</h3>
+                    <button onclick="openVideo('qHutS6oNKkM', 59)"
+                        class="text-red-500 hover:text-red-400 text-sm flex items-center gap-1">
+                        <i class="fab fa-youtube"></i> İzle
+                    </button>
+                </div>
+                <span class="bg-red-900 text-red-100 px-2 py-1 rounded text-xs font-mono mb-2 inline-block">3 Set x 5
+                    Tekrar</span>
+                <p class="text-xs text-slate-400 mb-3">Odak: Arka Bacak ve Bel (Dikkatli yapın)</p>
+                <div class="bg-slate-900 rounded p-3 text-sm text-slate-300 mb-3 border-l-2 border-emerald-500">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i> <strong>Teknik:</strong> Dizler çok hafif
+                    kırık, sabit. Kalçayı geriye iterek gövdeyi öne eğ. Sırt asla kamburlaşmasın.
+                </div>
+                <div class="flex gap-2 justify-start">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700 mr-4">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700 mr-4">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="exercise-card bg-slate-800 rounded-lg p-4 mb-4 border border-slate-700">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold">2. Overhead Press</h3>
+                    <button onclick="openVideo('qHutS6oNKkM', 248)"
+                        class="text-red-500 hover:text-red-400 text-sm flex items-center gap-1">
+                        <i class="fab fa-youtube"></i> İzle
+                    </button>
+                </div>
+                <span class="bg-slate-700 px-2 py-1 rounded text-xs font-mono mb-2 inline-block">5 Set x 5 Tekrar</span>
+                <p class="text-xs text-slate-400 mb-3">Odak: Omuzlar (Pres)</p>
+                <div class="bg-slate-900 rounded p-3 text-sm text-slate-300 mb-3 border-l-2 border-emerald-500">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i> <strong>Teknik:</strong> Tek ayakla banda bas.
+                    Bandı göğüs hizasına al. Başını hafif geri çekip dümdüz yukarı it.
+                </div>
+                <div class="flex gap-2 justify-between">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="exercise-card bg-slate-800 rounded-lg p-4 mb-4 border border-slate-700">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold">3. Lat Pulldown</h3>
+                    <button onclick="openVideo('qHutS6oNKkM', 474)"
+                        class="text-red-500 hover:text-red-400 text-sm flex items-center gap-1">
+                        <i class="fab fa-youtube"></i> İzle
+                    </button>
+                </div>
+                <span class="bg-slate-700 px-2 py-1 rounded text-xs font-mono mb-2 inline-block">5 Set x 5 Tekrar</span>
+                <p class="text-xs text-slate-400 mb-3">Odak: Kanat/Sırt (Kapı Aparatı Gerekli)</p>
+                <div class="bg-slate-900 rounded p-3 text-sm text-slate-300 mb-3 border-l-2 border-emerald-500">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i> <strong>Teknik:</strong> Bandı kapının üstüne
+                    sabitle. Diz çök. Dirsekleri aşağı ve geriye çekerek sırtı sıkıştır.
+                </div>
+                <div class="flex gap-2 justify-between">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                    <input type="checkbox" class="w-6 h-6 accent-emerald-500 bg-slate-700">
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENT: COOLDOWN -->
+        <div id="cooldown" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-4 border-l-4 border-emerald-500 pl-3">
+                <h2 class="text-lg font-bold text-emerald-400">Soğuma Rutini</h2>
+                <button onclick="openVideo('CXoqTYJ3Hrs', 1058)"
+                    class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded-full flex items-center gap-2 transition">
+                    <i class="fab fa-youtube"></i> İzle
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                    <h4 class="font-bold text-white">1. Üst Vücut Germe</h4>
+                    <p class="text-xs text-slate-400">Kolları arkaya aç, önde çaprazla.</p>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                    <h4 class="font-bold text-white">2. Denge & Diz Çekme</h4>
+                    <p class="text-xs text-slate-400">Tek ayak üstünde dur, dizi karna çek (15sn).</p>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                    <h4 class="font-bold text-white">3. Quadriceps Germe</h4>
+                    <p class="text-xs text-slate-400">Topuğu kalçaya çek (15sn).</p>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                    <h4 class="font-bold text-white">4. Figure-4 (Kalça)</h4>
+                    <p class="text-xs text-slate-400">Ayak bileğini diğer dizin üstüne koy, çök.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Tab Switching Logic ---
+        function switchTab(tabName) {
+            // Hide all contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            // Remove active style from buttons
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            // Show selected content
+            document.getElementById(tabName).classList.remove('hidden');
+            // Add active style to button
+            document.getElementById('btn-' + tabName).classList.add('active');
+        }
+
+        function toggleInfo() {
+            const modal = document.getElementById('infoModal');
+            modal.classList.toggle('hidden');
+        }
+
+        // --- Video Logic ---
+        function openVideo(videoId, startSeconds) {
+            const modal = document.getElementById('videoModal');
+            const frame = document.getElementById('videoFrame');
+            const fallback = document.getElementById('fallbackLink');
+
+            // Use standard embed URL. Referrerpolicy in HTML handles the origin concealment.
+            frame.src = `https://www.youtube.com/embed/${videoId}?start=${startSeconds}&autoplay=1&mute=1`;
+            // Set fallback link for direct access
+            fallback.href = `https://www.youtube.com/watch?v=${videoId}&t=${startSeconds}s`;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeVideo() {
+            const modal = document.getElementById('videoModal');
+            const frame = document.getElementById('videoFrame');
+            frame.src = ""; // Stop video by clearing src
+            modal.classList.add('hidden');
+        }
+
+        // Close video modal when clicking outside
+        document.getElementById('videoModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeVideo();
+            }
+        });
+
+        // --- Tempo Logic (8 Beats) ---
+        let tempoInterval;
+        let isTempoRunning = false;
+        let currentBeat = 0;
+
+        function toggleTempo() {
+            const btn = document.getElementById('tempoBtn');
+            if (isTempoRunning) {
+                clearInterval(tempoInterval);
+                isTempoRunning = false;
+                btn.innerText = "BAŞLAT";
+                btn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                btn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+                resetTempoVisuals();
+            } else {
+                isTempoRunning = true;
+                btn.innerText = "DURDUR";
+                btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                btn.classList.add('bg-red-500', 'hover:bg-red-600');
+                runTempoLoop();
+            }
+        }
+
+        function runTempoLoop() {
+            // Reset logic
+            currentBeat = 0;
+            updateBeatVisual(currentBeat); // Start immediately
+
+            tempoInterval = setInterval(() => {
+                currentBeat++;
+                if (currentBeat > 8) currentBeat = 1;
+                updateBeatVisual(currentBeat);
+            }, 1000); // 1 second per beat approximately
+        }
+
+        function updateBeatVisual(beat) {
+            // Reset all
+            for (let i = 1; i <= 8; i++) {
+                const box = document.getElementById(`beat-${i}`);
+                box.className = "tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600 opacity-50";
+            }
+
+            if (beat === 0) return;
+
+            // Highlight current
+            const activeBox = document.getElementById(`beat-${beat}`);
+            activeBox.classList.remove('opacity-50', 'bg-slate-700');
+            activeBox.classList.add('active-beat');
+
+            // Color coding logic based on phase
+            if (beat === 1) {
+                // Explosive / Positive
+                activeBox.classList.add('phase-positive');
+            } else if (beat >= 2 && beat <= 4) {
+                // Hold / Squeeze
+                activeBox.classList.add('phase-hold');
+            } else {
+                // Negative / Release
+                activeBox.classList.add('phase-negative');
+            }
+        }
+
+        function resetTempoVisuals() {
+            for (let i = 1; i <= 8; i++) {
+                const box = document.getElementById(`beat-${i}`);
+                box.className = "tempo-box bg-slate-700 rounded flex items-center justify-center text-xs font-bold border border-slate-600";
+            }
+        }
+
+        // --- Rest Timer Logic ---
+        let timerInterval;
+        let timeLeft = 120; // 2 minutes default
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Dinlenme süresi bitti!");
+                }
+            }, 1000);
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timeLeft = 120;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timerDisplay').innerText =
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+    </script>
+</body>
+
+</html>
