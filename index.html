@@ -468,12 +468,23 @@
             });
         });
 
-        function checkPassword() {
+        async function checkPassword() {
             const input = document.getElementById('passwordInput');
             const error = document.getElementById('loginError');
             const overlay = document.getElementById('loginOverlay');
 
-            if (input.value === 'fourty40-') {
+            const password = input.value;
+
+            // Hashing logic using SHA-256
+            const msgBuffer = new TextEncoder().encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            // Pre-calculated SHA-256 hash for 'fourty40-'
+            const targetHash = "6cac621f47995740f8e60fc877d40f66a0a9e07e4bf797145b2a4f371bb1a321";
+
+            if (hashHex === targetHash) {
                 // Success
                 sessionStorage.setItem('fourtyfit_auth', 'true');
 
@@ -486,7 +497,7 @@
                 // Error
                 error.classList.remove('hidden');
                 input.classList.add('border-red-500');
-                // Shake effect (optional, simple logic here)
+                // Shake effect logic
                 input.value = '';
                 input.focus();
 
